@@ -1,0 +1,101 @@
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load("learnr","foreign","knitr","arm","ggplot2")
+```
+
+
+
+```{r}
+
+library(lubridate)
+# From the original sources, we found that the data are not organized and clean.
+
+# By using the document which was created by Zhe Yu, we organized and cleaned data source, then I loaded data set MR_DATE into R.
+
+
+# Load the data
+Bouy=read.csv("MR_DATE.csv")
+
+#Using the function ymd_hms() in lubridate package to access POSIX type data.
+time=ymd_hms(Bouy$DATETIME)
+
+#Using year() function to get years of each date.
+Bouy$year=year(time)
+
+#Here I found out that there are some extreme data or error (which exceed 100 as temperature)in the data set.
+#Then remove all rows which contain temperature higher than 100.
+Bouy=Bouy[Bouy$WTMP<100,]
+
+Bouy=Bouy[Bouy$ATMP<100,]
+
+
+#There are some mistakes that the 1998 year was modified to 3898 in the previous steps. So here I subtracted 1900 for every row which contain 3898 
+for( i in 1:length(Bouy$year)){
+  
+   if (Bouy$year[i]>3000){
+    
+      Bouy$year[i]= Bouy$year[i]-1900
+   }
+  
+}
+
+
+
+# Using two index indicators and a function to calculate the index of beginning and end for each year. 
+before=0
+count=0
+
+le=function(x){
+  for(i in 1:length(Bouy$year)){
+
+    
+    if ( Bouy$year[i]<x){
+      before=before+1
+    }
+    if ( Bouy$year[i]==x){
+      count=count+1
+    }
+    
+  }
+  return(c(before,count))
+}
+
+
+#Create two container to contain average annual temperature values.
+Anual_WTMP=sample(1,30,replace = TRUE)
+
+Anual_ATMP=sample(1,30,replace = TRUE)
+
+#Assign the values to each container
+for(i in 1:30){
+  
+  Anual_WTMP[i]=mean(Bouy$WTMP[le(1987+i-1)[1]+1:le(1987+i-1)[2]])
+  
+  Anual_ATMP[i]=mean(Bouy$ATMP[le(1987+i-1)[1]+1:le(1987+i-1)[2]])
+}
+# Label for x-axis
+x=c(1987:2016)
+
+# Calculate the  average temperature of those 30 years.
+Anual=mean(Bouy$ATMP)
+Anual2=mean(Bouy$WTMP)
+# Because the 1987 year only have data in December so I drop it by using index [2:30]
+data=data.frame(x[2:30],Anual_ATMP[2:30])
+data2=data.frame(x[2:30],Anual_WTMP[2:30])
+
+#Here I want to show the difference between air temperature and water temperature on average.
+data3=data.frame(x[2:30],c(Anual_WTMP-Anual_ATMP)[2:30])
+
+
+#Try to center the data of temperature by subtracting the average temperature of those 30 years.
+ggplot(data,aes(x[2:30],Anual_ATMP[2:30]-Anual))+geom_smooth(aes(x[2:30],Anual_ATMP[2:30]-Anual),method="lm")
+
+ggplot(data2,aes(x[2:30],Anual_WTMP[2:30]-Anual2))+geom_smooth(aes(x[2:30],Anual_WTMP[2:30]-Anual2),method="lm")
+
+ggplot(data3,aes(x[2:30],c(Anual_WTMP-Anual_ATMP)[2:30]))+geom_smooth(aes(x[2:30],c(Anual_WTMP-Anual_ATMP)[2:30]),method = "lm")
+
+# Here the plots show the air temperatures are tending to decrease while the water temperatures are increasing.
+# Then it is easily to conclude that the difference between those two temperatures are increasing.
+```
